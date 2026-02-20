@@ -9,6 +9,9 @@ from .hierarchical_clustering import main as hierarchical_clustering_main, build
 from .similarity_matrix import main as similarity_matrix_main, build_argument_parser as build_similarity_matrix_parser
 from .database import main as database_main, build_argument_parser as build_database_parser
 from .gen_tree import main as gen_tree_main, build_argument_parser as build_gen_tree_parser
+from .train_clip_projector import main as train_clip_projector_main, build_argument_parser as build_train_clip_projector_parser
+from .gen_image_embeddings import main as gen_image_embeddings_main, build_argument_parser as build_gen_image_embeddings_parser
+from .merge_databases import main as merge_databases_main, build_argument_parser as build_merge_databases_parser
 
 __all__ = [
     "train_main",
@@ -20,6 +23,9 @@ __all__ = [
     "similarity_matrix_main",
     "database_main",
     "gen_tree_main",
+    "train_clip_projector_main",
+    "gen_image_embeddings_main",
+    "merge_databases_main",
     "build_train_parser",
     "build_embeddings_parser",
     "build_merge_lora_parser",
@@ -29,4 +35,7 @@ __all__ = [
     "build_similarity_matrix_parser",
     "build_database_parser",
     "build_gen_tree_parser",
+    "build_train_clip_projector_parser",
+    "build_gen_image_embeddings_parser",
+    "build_merge_databases_parser",
 ]

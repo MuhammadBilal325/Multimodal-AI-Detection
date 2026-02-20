@@ -1,10 +1,14 @@
-"""High-level detector interface for running DETree inference."""
+"""High-level detector interface for running DETree inference.
+
+Supports both text and image inputs.  For images, a trained ``CLIPProjector``
+maps CLIP embeddings into the DeTree embedding space before kNN lookup.
+"""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Optional, Sequence
+from typing import List, Optional, Sequence, Union
 
 import numpy as np
 import torch
@@ -13,9 +17,10 @@ from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
 
 from detree.model.text_embedding import TextEmbeddingModel
+from detree.model.clip_projector import CLIPProjector
 from detree.utils.index import Indexer
 
-__all__ = ["Detector", "Prediction"]
+__all__ = ["Detector", "Prediction", "ImagePrediction"]
 
 
 def _to_numpy(value) -> np.ndarray:
@@ -56,8 +61,21 @@ class Prediction:
     label: str
 
 
+@dataclass
+class ImagePrediction:
+    """Prediction result for an image input."""
+    image_path: str
+    probability_ai: float
+    probability_human: float
+    label: str
+
+
 class Detector:
-    """Wraps model + database logic for kNN predictions."""
+    """Wraps model + database logic for kNN predictions.
+    
+    Supports both text and image inputs.  For images, provide a trained
+    ``projector_path`` pointing to a ``CLIPProjector`` checkpoint.
+    """
 
     def __init__(
         self,
@@ -72,6 +90,7 @@ class Detector:
         threshold: float = 0.97,
         layer: Optional[int] = None,
         device: Optional[str] = None,
+        projector_path: Optional[Path] = None,
     ) -> None:
         self.database_path = database_path
         self.model_name_or_path = model_name_or_path
@@ -131,6 +150,15 @@ class Detector:
             raise ValueError(
                 "Database must include a 'human' entry in its classes list to compute probabilities."
             )
+
+        # --- Image projector (optional) -----------------------------------
+        self.projector: Optional[CLIPProjector] = None
+        self.projector_path = projector_path
+        if projector_path is not None:
+            self.projector = CLIPProjector.from_pretrained(
+                str(projector_path), device=str(self.device),
+            ).to(self.device)
+            self.projector.eval()
 
         self._configure_layer(requested_layer)
 
@@ -242,6 +270,109 @@ class Detector:
             predictions.append(
                 Prediction(
                     text=text,
+                    probability_ai=probability_ai,
+                    probability_human=probability_human,
+                    label=label,
+                )
+            )
+        return predictions
+
+    # ======================================================================
+    # IMAGE INFERENCE
+    # ======================================================================
+
+    def _load_clip_embedding(self, path: Union[str, Path]) -> np.ndarray:
+        """Load a single pre-computed CLIP embedding from .npy or .npz file."""
+        path = Path(path)
+        if path.suffix == ".npz":
+            data = np.load(path)
+            # Attempt common key names; fall back to first array
+            for key in ("embedding", "emb", "arr_0"):
+                if key in data:
+                    return data[key].astype(np.float32).flatten()
+            # Default to first array if no matching key
+            return data[list(data.keys())[0]].astype(np.float32).flatten()
+        else:
+            return np.load(path).astype(np.float32).flatten()
+
+    @torch.no_grad()
+    def _encode_images(
+        self,
+        embedding_paths: Sequence[Union[str, Path]],
+    ) -> np.ndarray:
+        """Project pre-computed CLIP embeddings through the trained projector.
+
+        Args:
+            embedding_paths: Paths to ``.npy`` or ``.npz`` files containing
+                             pre-computed CLIP embeddings.
+
+        Returns:
+            ``(N, embedding_dim)`` float32 array of projected, L2-normalised
+            embeddings ready for kNN search.
+        """
+        if self.projector is None:
+            raise RuntimeError(
+                "Image inference requires a projector.  "
+                "Initialise Detector with projector_path=..."
+            )
+
+        all_embeddings: List[torch.Tensor] = []
+
+        # Process in batches
+        for i in range(0, len(embedding_paths), self.batch_size):
+            batch_paths = embedding_paths[i : i + self.batch_size]
+            batch_embs = [self._load_clip_embedding(p) for p in batch_paths]
+            batch_tensor = torch.from_numpy(np.stack(batch_embs, axis=0))
+
+            # L2-normalise input (same as training)
+            batch_tensor = F.normalize(batch_tensor, dim=-1).to(self.device)
+
+            # Project
+            projected = self.projector(batch_tensor, normalize=True)
+            all_embeddings.append(projected.cpu())
+
+        if not all_embeddings:
+            return np.zeros((0, self.embedding_dim), dtype=np.float32)
+
+        stacked = torch.cat(all_embeddings, dim=0)
+        return stacked.numpy().astype(np.float32)
+
+    def predict_images(
+        self,
+        embedding_paths: Sequence[Union[str, Path]],
+    ) -> List[ImagePrediction]:
+        """Run kNN predictions on image (CLIP) embeddings.
+
+        Args:
+            embedding_paths: Paths to ``.npy`` or ``.npz`` files containing
+                             pre-computed CLIP embeddings.
+
+        Returns:
+            List of ``ImagePrediction`` results.
+        """
+        paths_list = [str(p) for p in embedding_paths]
+        embeddings = self._encode_images(paths_list)
+        if embeddings.shape[0] == 0:
+            return []
+
+        results = self.index.search_knn(
+            embeddings,
+            self.top_k,
+            index_batch_size=max(1, min(self.top_k, 128)),
+        )
+
+        predictions: List[ImagePrediction] = []
+        for path, (_ids, scores, labels) in zip(paths_list, results):
+            scores_tensor = torch.from_numpy(np.asarray(scores))
+            weights = torch.softmax(scores_tensor, dim=0)
+            label_tensor = torch.tensor(labels, dtype=torch.float32)
+            probability_human = float(torch.dot(weights, label_tensor).item())
+            probability_human = max(0.0, min(1.0, probability_human))
+            probability_ai = float(max(0.0, min(1.0, 1.0 - probability_human)))
+            label = "Real" if probability_human >= self.threshold else "AI"
+            predictions.append(
+                ImagePrediction(
+                    image_path=path,
                     probability_ai=probability_ai,
                     probability_human=probability_human,
                     label=label,

@@ -36,7 +36,7 @@ from detree.model.clip_projector import CLIPProjector
 # ======================================================================
 
 class CLIPEmbeddingDataset(Dataset):
-    """Loads pre-computed CLIP embeddings from ``.npy`` files.
+    """Loads pre-computed CLIP embeddings from ``.npy`` or ``.npz`` files.
 
     Labels are inferred from directory names:
         * ``AI``   in path → label **0** (AI-generated)
@@ -56,7 +56,7 @@ class CLIPEmbeddingDataset(Dataset):
         for root in root_dirs:
             self._scan(root)
         if not self.samples:
-            raise ValueError(f"No .npy files found under {root_dirs}")
+            raise ValueError(f"No .npy/.npz files found under {root_dirs}")
         labels = [s[1] for s in self.samples]
         print(
             f"CLIPEmbeddingDataset: {len(self.samples)} samples "
@@ -67,7 +67,7 @@ class CLIPEmbeddingDataset(Dataset):
         root_str = str(root_dir)
         for dirpath, _, filenames in os.walk(root_str):
             for fname in sorted(filenames):
-                if not fname.endswith(".npy"):
+                if not (fname.endswith(".npy") or fname.endswith(".npz")):
                     continue
                 full_path = os.path.join(dirpath, fname)
                 rel_parts = (
@@ -86,12 +86,25 @@ class CLIPEmbeddingDataset(Dataset):
                 if label is not None:
                     self.samples.append((full_path, label))
 
+    def _load_embedding(self, path: str) -> np.ndarray:
+        """Load embedding from .npy or .npz file."""
+        if path.endswith(".npz"):
+            data = np.load(path)
+            # Attempt common key names; fall back to first array
+            for key in ("embedding", "emb", "arr_0"):
+                if key in data:
+                    return data[key].astype(np.float32).flatten()
+            # Default to first array if no matching key
+            return data[list(data.keys())[0]].astype(np.float32).flatten()
+        else:
+            return np.load(path).astype(np.float32).flatten()
+
     def __len__(self) -> int:
         return len(self.samples)
 
     def __getitem__(self, idx: int) -> Tuple[torch.Tensor, int, int]:
         path, label = self.samples[idx]
-        emb = np.load(path).astype(np.float32).flatten()
+        emb = self._load_embedding(path)
         emb = torch.from_numpy(emb)
         if self.normalize_input:
             emb = F.normalize(emb, dim=0)
