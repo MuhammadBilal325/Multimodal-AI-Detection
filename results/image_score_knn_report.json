@@ -1,0 +1,67 @@
+{
+  "overall": {
+    "accuracy": 0.999324024822695,
+    "precision": 0.9995343783951576,
+    "recall": 0.999113475177305,
+    "f1": 0.999323882466388,
+    "roc_auc": 0.9999984885655588,
+    "recall_AI": 0.9995345744680851,
+    "recall_Real": 0.999113475177305
+  },
+  "per_folder": {
+    "AI_Diffusion": {
+      "accuracy": 0.9995333333333334,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "roc_auc": NaN,
+      "recall_AI": 0.9995333333333334,
+      "recall_Real": NaN
+    },
+    "AI_Firefly": {
+      "accuracy": 0.9833333333333333,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "roc_auc": NaN,
+      "recall_AI": 0.9833333333333333,
+      "recall_Real": NaN
+    },
+    "AI_GAN": {
+      "accuracy": 0.9995333333333334,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "roc_auc": NaN,
+      "recall_AI": 0.9995333333333334,
+      "recall_Real": NaN
+    },
+    "AI_Midjourney": {
+      "accuracy": 0.9996666666666667,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "roc_auc": NaN,
+      "recall_AI": 0.9996666666666667,
+      "recall_Real": NaN
+    },
+    "Real_ImageNet": {
+      "accuracy": 0.9985372340425532,
+      "precision": 1.0,
+      "recall": 0.9985372340425532,
+      "f1": 0.9992680817086965,
+      "roc_auc": NaN,
+      "recall_AI": NaN,
+      "recall_Real": 0.9985372340425532
+    },
+    "Real_VISION": {
+      "accuracy": 0.9996897163120567,
+      "precision": 1.0,
+      "recall": 0.9996897163120567,
+      "f1": 0.9998448340833019,
+      "roc_auc": NaN,
+      "recall_AI": NaN,
+      "recall_Real": 0.9996897163120567
+    }
+  }
+}

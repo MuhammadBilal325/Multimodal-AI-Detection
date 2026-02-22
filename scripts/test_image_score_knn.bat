@@ -22,7 +22,7 @@ REM Trained CLIPProjector checkpoint directory
 set PROJECTOR=Models\clip_projector\clip_align\best
 
 REM Root directory of pre-computed CLIP .npy embeddings
-set EMBEDDINGS_DIR=Embeddings\
+set EMBEDDINGS_DIR=Embeddings
 
 
 REM kNN neighbours to retrieve
@@ -35,11 +35,14 @@ REM Batch size for projection
 set BATCH_SIZE=256
 
 REM Optional: save a JSON report (leave empty to skip)
-set OUTPUT=
+set OUTPUT=results\image_score_knn_report.json
 
 REM ──────────────────────────────────────────────────────────────────────
 REM Run evaluation
 REM ──────────────────────────────────────────────────────────────────────
+
+set OUTPUT_ARG=
+if not "%OUTPUT%"=="" set OUTPUT_ARG=--output "%OUTPUT%"
 
 python -m detree.cli.test_image_score_knn ^
     --database "%DATABASE%" ^
@@ -48,9 +51,19 @@ python -m detree.cli.test_image_score_knn ^
     --top-k %TOP_K% ^
     --threshold %THRESHOLD% ^
     --batch-size %BATCH_SIZE% ^
-    --output "%OUTPUT%"
+    %OUTPUT_ARG%
+
+if %ERRORLEVEL% neq 0 (
+    echo.
+    echo ERROR: Evaluation failed. See output above.
+    exit /b %ERRORLEVEL%
+)
 
 echo.
-echo Evaluation complete. Report saved to: %OUTPUT%
+if not "%OUTPUT%"=="" (
+    echo Evaluation complete. Report saved to: %OUTPUT%
+) else (
+    echo Evaluation complete.
+)
 
 endlocal

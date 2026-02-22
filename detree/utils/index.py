@@ -32,6 +32,9 @@ class Indexer(object):
     def _create_sharded_index(self):
         # Determine the number of available GPUs
         ngpu = faiss.get_num_gpus()
+        if ngpu == 0:
+            # No GPUs available — use a CPU flat inner-product index
+            return faiss.IndexFlatIP(self.vector_sz)
         # Create an IndexShards object with successive_ids=True to keep ids globally unique
         index = faiss.IndexShards(self.vector_sz, True, True)
         # Create a sub-index for each GPU and add it to the IndexShards container
