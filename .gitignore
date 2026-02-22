@@ -4,3 +4,5 @@ __pycache__/
 *.npy
 Embeddings.zip
 RealBench/
+Models/
+databases/

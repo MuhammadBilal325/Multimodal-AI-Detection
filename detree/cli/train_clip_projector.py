@@ -234,6 +234,65 @@ def _load_text_centroids(
 # Argument parser
 # ======================================================================
 
+def _folder_balanced_split(
+    dataset: "CLIPEmbeddingDataset",
+    root_dirs: Sequence[Path],
+    val_split: float,
+    seed: int,
+) -> Tuple["torch.utils.data.Subset", "torch.utils.data.Subset"]:
+    """Split *dataset* into train/val subsets by doing the split independently
+    within each top-level folder found under *root_dirs*.
+
+    This ensures every folder contributes proportionally to both the training
+    and validation sets regardless of how many samples it contains.
+
+    Args:
+        dataset:   A ``CLIPEmbeddingDataset`` whose ``.samples`` list is used.
+        root_dirs: The same root directories that were passed to the dataset.
+        val_split: Fraction of each folder to place in the validation set.
+        seed:      Random seed for reproducibility.
+
+    Returns:
+        ``(train_subset, val_subset)`` Subset objects.
+    """
+    # Group sample indices by top-level folder name relative to any root dir
+    folder_to_indices: dict = {}
+    for idx, (path, _) in enumerate(dataset.samples):
+        folder_key: Optional[str] = None
+        for root in root_dirs:
+            try:
+                rel = os.path.relpath(path, str(root)).replace("\\", "/")
+                folder_key = rel.split("/")[0]
+                break
+            except ValueError:
+                # Can happen on Windows when path is on a different drive
+                continue
+        if folder_key is None:
+            folder_key = "__unknown__"
+        folder_to_indices.setdefault(folder_key, []).append(idx)
+
+    rng = random.Random(seed)
+    train_indices: List[int] = []
+    val_indices: List[int] = []
+
+    print("  Per-folder split:")
+    for folder, indices in sorted(folder_to_indices.items()):
+        shuffled = indices[:]
+        rng.shuffle(shuffled)
+        n_val = max(1, int(len(shuffled) * val_split))
+        val_indices.extend(shuffled[:n_val])
+        train_indices.extend(shuffled[n_val:])
+        print(
+            f"    {folder}: {len(shuffled)} samples → "
+            f"{len(shuffled) - n_val} train, {n_val} val"
+        )
+
+    return (
+        torch.utils.data.Subset(dataset, train_indices),
+        torch.utils.data.Subset(dataset, val_indices),
+    )
+
+
 def build_argument_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Train the CLIP → DeTree alignment projector.",
@@ -403,15 +462,15 @@ def train(args: argparse.Namespace) -> None:
         )
         args.clip_dim = detected_clip_dim
 
-    # Train / validation split
-    n_val = int(len(full_dataset) * args.val_split)
-    n_train = len(full_dataset) - n_val
-    train_dataset, val_dataset = torch.utils.data.random_split(
+    # Train / validation split — balanced per top-level folder
+    train_dataset, val_dataset = _folder_balanced_split(
         full_dataset,
-        [n_train, n_val],
-        generator=torch.Generator().manual_seed(args.seed),
+        args.embeddings_dir,
+        val_split=args.val_split,
+        seed=args.seed,
     )
-    print(f"  Split: {n_train} train, {n_val} val")
+    n_train, n_val = len(train_dataset), len(val_dataset)
+    print(f"  Total split: {n_train} train, {n_val} val")
 
     train_loader = DataLoader(
         train_dataset,

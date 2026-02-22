@@ -12,19 +12,19 @@ REM Configuration - adjust these paths as needed
 REM ──────────────────────────────────────────────────────────────────────
 
 REM Root directory containing CLIP embeddings (should have AI/ and Real/ subfolders)
-set EMBEDDINGS_DIR=Embeddings\Embeddings\Embeddings
+set EMBEDDINGS_DIR=Embeddings
 
 REM Path to the frozen DeTree text database
-set TEXT_DATABASE=databases\text_compressed.pt
+set TEXT_DATABASE=databases\priori1_center10k.pt
 
 REM Layer in the text database to align to (check your database keys)
-set TARGET_LAYER=23
+set TARGET_LAYER=17
 
 REM CLIP embedding dimension (512 for ViT-B/32, 768 for ViT-L/14)
 set CLIP_DIM=512
 
 REM Output directory
-set OUTPUT_DIR=runs\clip_projector
+set OUTPUT_DIR=Models\clip_projector
 set EXPERIMENT_NAME=clip_align
 
 REM Training hyperparameters
@@ -56,4 +56,5 @@ echo.
 echo Training complete!
 echo Best checkpoint saved to: %OUTPUT_DIR%\%EXPERIMENT_NAME%\best
 
+pause
 endlocal

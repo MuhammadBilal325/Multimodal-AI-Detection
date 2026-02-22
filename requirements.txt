@@ -1,4 +1,5 @@
 torch  # Recommended: 2.8.0
+torch-cuda
 faiss-cpu
 transformers>=4.36.0
 peft>=0.7.0
