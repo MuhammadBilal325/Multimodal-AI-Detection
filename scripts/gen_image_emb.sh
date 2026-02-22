@@ -18,13 +18,13 @@ set -e
 # ──────────────────────────────────────────────────────────────────────
 
 # Root directory containing CLIP embeddings
-EMBEDDINGS_DIR="Embeddings/Embeddings/Embeddings"
+EMBEDDINGS_DIR="Embeddings/"
 
 # Path to the trained projector checkpoint
 PROJECTOR_PATH="runs/clip_projector/clip_align/best"
 
 # Target layer (must match what you used during training)
-TARGET_LAYER=23
+TARGET_LAYER=17
 
 # Output path for the image embedding database
 OUTPUT="databases/image_embeddings.pt"

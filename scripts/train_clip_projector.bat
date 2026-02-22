@@ -18,7 +18,7 @@ REM Path to the frozen DeTree text database
 set TEXT_DATABASE=databases\priori1_center10k.pt
 
 REM Layer in the text database to align to (check your database keys)
-set TARGET_LAYER=17
+set TARGET_LAYER=20
 
 REM CLIP embedding dimension (512 for ViT-B/32, 768 for ViT-L/14)
 set CLIP_DIM=512

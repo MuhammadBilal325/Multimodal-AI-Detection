@@ -410,7 +410,7 @@ def train(args: argparse.Namespace) -> None:
     np.random.seed(args.seed)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
+    print(f"Using device: {device}")
     # ------------------------------------------------------------------
     # 1. Load frozen text database centroids
     # ------------------------------------------------------------------

@@ -8,13 +8,13 @@ REM Configuration - adjust these paths as needed
 REM ──────────────────────────────────────────────────────────────────────
 
 REM Root directory containing CLIP embeddings
-set EMBEDDINGS_DIR=Embeddings\Embeddings\Embeddings
+set EMBEDDINGS_DIR=Embeddings
 
 REM Path to the trained projector checkpoint
-set PROJECTOR_PATH=runs\clip_projector\clip_align\best
+set PROJECTOR_PATH=Models\clip_projector\clip_align\best
 
 REM Target layer (must match what you used during training)
-set TARGET_LAYER=23
+set TARGET_LAYER=20
 
 REM Output path for the image embedding database
 set OUTPUT=databases\image_embeddings.pt
