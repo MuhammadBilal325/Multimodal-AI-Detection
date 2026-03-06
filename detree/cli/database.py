@@ -20,21 +20,26 @@ class GPUKMeansClusterer:
         self.n_clusters = n_clusters
         self.clus.update_index = True
 
-        res = [faiss.StandardGpuResources() for _ in range(n_gpu)]
-        flat_config = []
-        for i in range(n_gpu):
-            cfg = faiss.GpuIndexFlatConfig()
-            cfg.useFloat16 = False
-            cfg.device = i
-            flat_config.append(cfg)
+        _has_gpu = hasattr(faiss, "StandardGpuResources")
+        if _has_gpu and n_gpu > 0:
+            res = [faiss.StandardGpuResources() for _ in range(n_gpu)]
+            flat_config = []
+            for i in range(n_gpu):
+                cfg = faiss.GpuIndexFlatConfig()
+                cfg.useFloat16 = False
+                cfg.device = i
+                flat_config.append(cfg)
 
-        if n_gpu == 1:
-            self.index = faiss.GpuIndexFlatL2(res[0], self.dim, flat_config[0])
+            if n_gpu == 1:
+                self.index = faiss.GpuIndexFlatL2(res[0], self.dim, flat_config[0])
+            else:
+                indexes = [faiss.GpuIndexFlatL2(res[i], self.dim, flat_config[i]) for i in range(n_gpu)]
+                self.index = faiss.IndexReplicas()
+                for sub_index in indexes:
+                    self.index.addIndex(sub_index)
         else:
-            indexes = [faiss.GpuIndexFlatL2(res[i], self.dim, flat_config[i]) for i in range(n_gpu)]
-            self.index = faiss.IndexReplicas()
-            for sub_index in indexes:
-                self.index.addIndex(sub_index)
+            print("faiss-gpu not available; falling back to CPU IndexFlatL2.")
+            self.index = faiss.IndexFlatL2(self.dim)
 
     def fit(self, embeddings_np: np.ndarray) -> np.ndarray:
         self.index.reset()

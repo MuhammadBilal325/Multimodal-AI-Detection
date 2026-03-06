@@ -33,6 +33,8 @@ def __getattr__(name: str):
         "build_merge_databases_parser": (".merge_databases", "build_argument_parser"),
         "test_image_score_knn_main": (".test_image_score_knn", "main"),
         "build_test_image_score_knn_parser": (".test_image_score_knn", "build_argument_parser"),
+        "generalization_sweep_main": (".generalization_sweep", "main"),
+        "build_generalization_sweep_parser": (".generalization_sweep", "build_argument_parser"),
     }
 
     if name in _imports:
@@ -71,4 +73,6 @@ __all__ = [
     "build_merge_databases_parser",
     "test_image_score_knn_main",
     "build_test_image_score_knn_parser",
+    "generalization_sweep_main",
+    "build_generalization_sweep_parser",
 ]
