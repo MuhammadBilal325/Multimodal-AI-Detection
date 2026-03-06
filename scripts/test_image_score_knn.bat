@@ -16,7 +16,7 @@ REM Configuration - adjust these paths as needed
 REM ──────────────────────────────────────────────────────────────────────
 
 REM Merged multimodal database (text + image)
-set DATABASE=databases\merged_multimodal.pt
+set DATABASE=databases\merged_multimodal_comp.pt
 
 REM Trained CLIPProjector checkpoint directory
 set PROJECTOR=Models\clip_projector\clip_align\best
